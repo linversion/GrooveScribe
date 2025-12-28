@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useDrumStore } from '../store/useDrumStore';

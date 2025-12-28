@@ -1,4 +1,3 @@
-import React from 'react';
 import { ChatInterface } from './components/ChatInterface';
 import { DrumGrid } from './components/DrumGrid';
 import { ScoreRenderer } from './components/ScoreRenderer';

@@ -1,5 +1,4 @@
-import React from 'react';
-import { useDrumStore, INSTRUMENTS, INSTRUMENT_NAMES, Instrument } from '../store/useDrumStore';
+import { useDrumStore, INSTRUMENTS, INSTRUMENT_NAMES } from '../store/useDrumStore';
 import { clsx } from 'clsx';
 
 export const DrumGrid = () => {

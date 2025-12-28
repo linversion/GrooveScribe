@@ -1,27 +1,24 @@
-import React, { useEffect, useRef } from 'react';
-import { Play, Square, RefreshCw, Volume2 } from 'lucide-react';
-import { useDrumStore, INSTRUMENTS } from '../store/useDrumStore';
+import { useEffect, useRef } from 'react';
+import { Play, Square, Volume2 } from 'lucide-react';
+import { useDrumStore } from '../store/useDrumStore';
 import * as Tone from 'tone';
+import { clsx } from 'clsx';
 
 export const TransportControls = () => {
-  const { isPlaying, setIsPlaying, bpm, setBpm, currentStep, setCurrentStep, gridData, stepsPerMeasure, totalMeasures } = useDrumStore();
+  const { isPlaying, setIsPlaying, bpm, setBpm, setCurrentStep, gridData, stepsPerMeasure, totalMeasures } = useDrumStore();
   
   // Tone.js Refs
   const seqRef = useRef<Tone.Sequence | null>(null);
-  const samplerRef = useRef<Tone.Players | null>(null);
-  const isLoadedRef = useRef(false);
 
   // Initialize Audio
   useEffect(() => {
-    // 简单的合成器模拟鼓声（为了避免加载外部采样的复杂性）
-    // 实际项目中应使用 Tone.Sampler 加载真实 wav
+    // 简单的合成器模拟鼓声
     const kickSynth = new Tone.MembraneSynth().toDestination();
     const snareSynth = new Tone.NoiseSynth({
       noise: { type: 'white' },
       envelope: { attack: 0.001, decay: 0.2, sustain: 0 }
     }).toDestination();
     const metalSynth = new Tone.MetalSynth({
-      frequency: 200,
       envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
       harmonicity: 5.1,
       modulationIndex: 32,
@@ -67,8 +64,6 @@ export const TransportControls = () => {
     };
   }, []); // Run once
 
-  // Sync Data to Loop (Actually Tone.Sequence pulls data in the callback, so we just need to handle start/stop)
-  
   // Sync BPM
   useEffect(() => {
     Tone.Transport.bpm.value = bpm;

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import * as Tone from 'tone';
 
 // 乐器定义
 export type Instrument = 'kick' | 'snare' | 'hihat_closed' | 'hihat_open' | 'tom_high' | 'tom_floor';
