@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useDrumStore } from '../store/useDrumStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface Message {
   id: string;
@@ -68,67 +73,73 @@ export const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-cursor-sidebar border-r border-cursor-border">
+    <Card className="h-full flex flex-col border-r-0 rounded-none bg-background border-border">
       {/* Header */}
-      <div className="p-4 border-b border-cursor-border flex items-center justify-between">
-        <span className="font-semibold text-sm flex items-center gap-2">
-           <Sparkles className="w-4 h-4 text-cursor-accent" />
-           AI Agent
-        </span>
-        <span className="text-xs text-gray-500 bg-cursor-bg px-2 py-1 rounded-full">Model: Cursor-Drum-v1</span>
-      </div>
+      <CardHeader className="py-4 border-b border-border bg-muted/20">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+             <Sparkles className="w-4 h-4 text-primary" />
+             AI Agent
+          </CardTitle>
+          <Badge variant="secondary" className="text-xs">
+            Cursor-Drum-v1
+          </Badge>
+        </div>
+      </CardHeader>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {messages.map(msg => (
-          <div key={msg.id} className={clsx("flex gap-3 text-sm", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-            <div className={clsx(
-              "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-              msg.role === 'agent' ? "bg-cursor-accent text-white" : "bg-gray-600 text-white"
-            )}>
-              {msg.role === 'agent' ? <Bot size={16} /> : <User size={16} />}
-            </div>
-            <div className={clsx(
-              "max-w-[80%] p-3 rounded-lg leading-relaxed whitespace-pre-wrap",
-              msg.role === 'agent' ? "bg-cursor-bg text-cursor-text" : "bg-blue-600 text-white"
-            )}>
-              {msg.content}
-            </div>
+      <CardContent className="flex-1 p-0 overflow-hidden">
+        <ScrollArea className="h-full p-4">
+          <div className="space-y-6">
+            {messages.map(msg => (
+              <div key={msg.id} className={clsx("flex gap-3 text-sm", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
+                <div className={clsx(
+                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border",
+                  msg.role === 'agent' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {msg.role === 'agent' ? <Bot size={16} /> : <User size={16} />}
+                </div>
+                <div className={clsx(
+                  "max-w-[85%] p-3 rounded-lg leading-relaxed whitespace-pre-wrap shadow-sm",
+                  msg.role === 'agent' ? "bg-muted/50 text-foreground" : "bg-primary text-primary-foreground"
+                )}>
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="flex gap-3 text-sm">
+                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 animate-pulse">
+                   <Bot size={16} className="text-primary-foreground" />
+                 </div>
+                 <div className="bg-muted p-3 rounded-lg text-muted-foreground text-xs">Thinking...</div>
+              </div>
+            )}
           </div>
-        ))}
-        {isTyping && (
-          <div className="flex gap-3 text-sm">
-             <div className="w-8 h-8 rounded-full bg-cursor-accent flex items-center justify-center shrink-0">
-               <Bot size={16} className="animate-pulse" />
-             </div>
-             <div className="bg-cursor-bg p-3 rounded-lg text-gray-400">Thinking...</div>
-          </div>
-        )}
-      </div>
+        </ScrollArea>
+      </CardContent>
 
       {/* Input */}
-      <div className="p-4 border-t border-cursor-border bg-cursor-bg">
-        <div className="relative">
-          <input
-            type="text"
-            className="w-full bg-cursor-input text-cursor-text rounded-md pl-4 pr-10 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-cursor-accent border border-cursor-border"
-            placeholder="Ask AI to edit the groove..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          />
-          <button 
-            onClick={handleSend}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
-          >
-            <Send size={16} />
-          </button>
+      <CardFooter className="p-4 border-t border-border bg-background">
+        <div className="w-full space-y-2">
+          <div className="flex gap-2">
+            <Input
+              className="flex-1"
+              placeholder="Ask AI to edit the groove..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            />
+            <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
+              <Send size={16} />
+            </Button>
+          </div>
+          <div className="flex justify-between px-1 text-[10px] text-muted-foreground">
+            <span>Try: "Rock", "Disco", "Clear"</span>
+            <span>Enter to send</span>
+          </div>
         </div>
-        <div className="mt-2 text-[10px] text-gray-500 flex justify-between px-1">
-          <span>Supported commands: "Rock", "Disco", "Clear"</span>
-          <span>Enter to send</span>
-        </div>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 };

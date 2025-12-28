@@ -1,5 +1,6 @@
 import { useDrumStore, INSTRUMENTS, INSTRUMENT_NAMES } from '../store/useDrumStore';
 import { clsx } from 'clsx';
+import { Card } from '@/components/ui/card';
 
 export const DrumGrid = () => {
   const { gridData, stepsPerMeasure, totalMeasures, currentStep, isPlaying, toggleNote } = useDrumStore();
@@ -8,12 +9,12 @@ export const DrumGrid = () => {
   const steps = Array.from({ length: totalSteps }, (_, i) => i);
 
   return (
-    <div className="w-full overflow-x-auto select-none bg-cursor-sidebar p-6 rounded-xl border border-cursor-border">
-      <div className="flex flex-col gap-1 min-w-max">
+    <Card className="w-full overflow-x-auto select-none bg-card p-6 rounded-xl border-border shadow-sm">
+      <div className="flex flex-col gap-2 min-w-max">
         {INSTRUMENTS.map((inst) => (
-          <div key={inst} className="flex items-center gap-2">
+          <div key={inst} className="flex items-center gap-3 group">
             {/* Instrument Label */}
-            <div className="w-24 text-xs font-medium text-gray-400 uppercase tracking-wider text-right pr-4">
+            <div className="w-24 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right pr-2 group-hover:text-foreground transition-colors">
               {INSTRUMENT_NAMES[inst]}
             </div>
             
@@ -29,24 +30,27 @@ export const DrumGrid = () => {
                     key={`${inst}-${step}`}
                     onClick={() => toggleNote(inst, step)}
                     className={clsx(
-                      "w-8 h-10 rounded-sm transition-all duration-75 relative",
-                      "border border-opacity-10",
+                      "w-8 h-12 rounded-[4px] transition-all duration-100 relative",
                       // Background logic
-                      note.active ? "bg-cursor-accent border-cursor-accent" : (isDownbeat ? "bg-[#333] border-white" : "bg-[#252525] border-transparent"),
+                      note.active 
+                        ? "bg-primary border-primary shadow-sm scale-[0.95]" 
+                        : (isDownbeat 
+                            ? "bg-muted/80 hover:bg-muted-foreground/30" 
+                            : "bg-muted/30 hover:bg-muted-foreground/20"),
                       // Hover logic
-                      "hover:opacity-80",
+                      !note.active && "hover:scale-110",
                       // Current step indicator
-                      isCurrent && "ring-2 ring-white z-10"
+                      isCurrent && "ring-2 ring-ring z-10 brightness-110 scale-105"
                     )}
                   >
                     {/* Articulation Indicator */}
                     {note.active && (
                       <span className={clsx(
-                        "absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white",
-                        note.articulation === 'ghost' && "opacity-50",
-                        note.articulation === 'accent' && "text-yellow-200 text-xs"
+                        "absolute inset-0 flex items-center justify-center text-[10px] font-bold text-primary-foreground",
+                        note.articulation === 'ghost' && "opacity-60",
+                        note.articulation === 'accent' && "text-accent-foreground scale-125"
                       )}>
-                        {note.articulation === 'accent' && '>'}
+                        {note.articulation === 'accent' && '›'}
                         {note.articulation === 'ghost' && '()'}
                       </span>
                     )}
@@ -58,17 +62,20 @@ export const DrumGrid = () => {
         ))}
         
         {/* Step Numbers (Optional Helper) */}
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center gap-3 mt-2">
           <div className="w-24"></div>
           <div className="flex gap-1">
             {steps.map((step) => (
-              <div key={step} className="w-8 text-center text-[10px] text-gray-600">
+              <div key={step} className={clsx(
+                "w-8 text-center text-[9px] text-muted-foreground",
+                isPlaying && currentStep === step && "text-primary font-bold"
+              )}>
                 {(step % 4) + 1}
               </div>
             ))}
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
