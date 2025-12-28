@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-cursor-bg text-cursor-text;
+}
+
+/* Custom Scrollbar to match IDE feel */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-cursor-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-cursor-border rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-600;
+}
