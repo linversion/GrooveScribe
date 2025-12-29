@@ -150,7 +150,169 @@ interface SequencerState {
   getAbcString: () => string;
 }
 
-// Tone.js 集成思路
-// 使用 Tone.Sequence 或 Tone.Part 来绑定 gridData 的变化
-// 当 gridData 变化时，debounce 更新 Tone.Sequence 的 events
+// Tone.js 集成思路（已实现）
+// ✅ 使用 Tone.Part 来绑定 gridData 的变化
+// ✅ 当 gridData 变化时，debounce (100ms) 更新 Tone.Part 的 events
+```
+
+## 6. Tone.js 音频引擎集成方案 (已实现)
+
+### 架构设计
+
+我们采用了 **自定义 Hook** 模式来封装音频引擎逻辑，实现了与状态管理的清晰解耦。
+
+#### 核心组件
+
+1. **`useAudioEngine` Hook** (`src/hooks/useAudioEngine.ts`)
+   - **职责**：完整的音频生命周期管理
+   - **功能**：
+     - 初始化 Tone.js 合成器（Kick/Snare/Hi-Hat/Toms）
+     - 监听 `gridData` 变化并 **debounce 更新**（100ms）
+     - 使用 `Tone.Part` 动态重建音序事件
+     - 暴露 `play()` 和 `stop()` 接口给 UI
+
+2. **为什么选择 Tone.Part 而不是 Tone.Sequence？**
+   
+   | 特性 | Tone.Sequence | Tone.Part |
+   |------|---------------|-----------|
+   | 事件更新 | 需要重新创建 | 支持 `.clear()` 和动态添加 |
+   | 时间精度 | 固定步长（如 16n） | 精确到 Transport Time (Bar:Beat:Sixteenth) |
+   | 多音符同步 | 较难处理 | 原生支持同一时间点的多个事件 |
+   | 性能 | 轻量 | 稍重，但更灵活 |
+
+   **结论**：对于需要频繁更新的鼓谱编辑器，`Tone.Part` 的灵活性更胜一筹。
+
+### 实现细节
+
+#### 1. Debounce 更新机制
+
+```typescript
+const updateSequence = useCallback(() => {
+  if (updateTimeoutRef.current) {
+    clearTimeout(updateTimeoutRef.current);
+  }
+
+  // 100ms 防抖：避免用户快速点击时频繁重建 Part
+  updateTimeoutRef.current = setTimeout(() => {
+    const events = generateEvents(); // 从 gridData 生成事件
+    
+    // 停止并释放旧的 Part
+    if (partRef.current) {
+      partRef.current.stop();
+      partRef.current.dispose();
+    }
+
+    // 创建新 Part
+    const part = new Tone.Part((time, event) => {
+      // 音符触发逻辑...
+    }, events);
+
+    part.loop = true;
+    part.loopEnd = `${totalMeasures}m`;
+    partRef.current = part;
+
+    // 如果正在播放，无缝切换
+    if (isPlaying) {
+      part.start(0);
+    }
+  }, 100);
+}, [gridData, isPlaying]);
+```
+
+**优势**：
+- 用户连续编辑时不会卡顿
+- 自动处理播放中的更新（热重载音序）
+
+#### 2. 事件生成逻辑
+
+```typescript
+const generateEvents = () => {
+  const events = [];
+  for (let step = 0; step < totalSteps; step++) {
+    const notesAtStep = [];
+    
+    INSTRUMENTS.forEach(inst => {
+      if (gridData[inst][step].active) {
+        notesAtStep.push({ instrument: inst, velocity: gridData[inst][step].velocity });
+      }
+    });
+
+    events.push({
+      time: `0:0:${step}`, // Tone.js 时间格式
+      step,
+      notes: notesAtStep
+    });
+  }
+  return events;
+};
+```
+
+**关键点**：
+- 即使某步没有音符，也添加事件（用于更新 UI 游标）
+- 使用 Tone.js 的 `Bar:Beat:Sixteenth` 时间格式确保精准同步
+
+#### 3. 音色设计
+
+| 乐器 | Tone.js Synth | 参数调优 |
+|------|---------------|----------|
+| Kick (底鼓) | `MembraneSynth` | `pitchDecay: 0.05, octaves: 10` 模拟低频共振 |
+| Snare (军鼓) | `NoiseSynth` + `MembraneSynth` | 白噪声 + 音调混合，模拟真实军鼓的 "砰" 声 |
+| Hi-Hat | `MetalSynth` | `harmonicity: 5.1` 产生金属质感 |
+| Toms | `MembraneSynth` | 不同 `pitchDecay` 区分 High/Floor Tom |
+
+#### 4. UI 游标同步
+
+```typescript
+Tone.Draw.schedule(() => {
+  setCurrentStep(event.step);
+}, time);
+```
+
+使用 `Tone.Draw.schedule` 确保 UI 更新与音频时钟同步，避免视觉延迟。
+
+### 与 Zustand Store 的集成
+
+```typescript
+// TransportControls.tsx
+const { isPlaying, setIsPlaying, bpm, setBpm } = useDrumStore();
+const { play, stop } = useAudioEngine(); // Hook 内部自动订阅 gridData
+
+const togglePlay = async () => {
+  if (!isPlaying) {
+    await play();
+    setIsPlaying(true);
+  } else {
+    stop();
+    setIsPlaying(false);
+  }
+};
+```
+
+**数据流**：
+```
+用户点击 Grid 
+  ↓
+Zustand Store 更新 gridData
+  ↓
+useAudioEngine 监听到变化
+  ↓
+Debounce 100ms
+  ↓
+重建 Tone.Part
+  ↓
+如果正在播放 → 无缝切换音序
+```
+
+### 性能优化
+
+1. **Debounce**：防止高频更新导致音频引擎卡顿
+2. **按需启动**：只在 `isPlaying=true` 时启动 `Tone.Part`
+3. **自动清理**：组件卸载时释放所有 Synth 和 Part，防止内存泄漏
+
+### 未来优化方向
+
+1. **采样器替换合成器**：使用 `Tone.Sampler` 加载真实鼓音色（WAV/MP3）
+2. **音效处理链**：添加 `Tone.Reverb` 和 `Tone.EQ` 提升音质
+3. **MIDI 导出**：基于 `gridData` 生成标准 MIDI 文件
+4. **实时录音**：使用 `Tone.Recorder` 导出 WAV 音频
 ```
