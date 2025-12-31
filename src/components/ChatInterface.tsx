@@ -16,20 +16,20 @@ interface Message {
 
 export const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { 
-      id: '1', 
-      role: 'agent', 
-      content: '我是你的 AI 鼓手助手。我可以帮你生成节奏、修改鼓谱或回答音乐相关问题。\n\n试着对我说："生成一个 Funky 的节奏" 或 "把踩镲改成 16 分音符"。' 
+    {
+      id: '1',
+      role: 'agent',
+      content: '我是你的 AI 鼓手助手。我可以帮你生成节奏、修改鼓谱或回答音乐相关问题。\n\n试着对我说："生成一个 Funky 的节奏" 或 "把踩镲改成 16 分音符"。'
     }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  
+
   const { clearGrid, toggleNote } = useDrumStore();
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    
+
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -38,10 +38,10 @@ export const ChatInterface = () => {
     // Mock AI Response Logic
     setTimeout(() => {
       let responseText = "我收到了你的请求。由于我只是一个前端演示原型，我无法真正调用 LLM 来修改 Store。";
-      
+
       // Simple Keyword Matching for Demo
       const lowerInput = userMsg.content.toLowerCase();
-      
+
       if (lowerInput.includes('clear') || lowerInput.includes('清空')) {
         clearGrid();
         responseText = "已清空鼓谱。";
@@ -63,10 +63,10 @@ export const ChatInterface = () => {
         responseText = "已生成 Disco 节奏，感受那个 Four-on-the-floor 吧！";
       }
 
-      setMessages(prev => [...prev, { 
-        id: (Date.now() + 1).toString(), 
-        role: 'agent', 
-        content: responseText 
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'agent',
+        content: responseText
       }]);
       setIsTyping(false);
     }, 1000);
@@ -75,13 +75,13 @@ export const ChatInterface = () => {
   return (
     <Card className="h-full flex flex-col border-r-0 rounded-none bg-background border-border">
       {/* Header */}
-      <CardHeader className="py-4 border-b border-border bg-muted/20">
+      <CardHeader className="py-4 px-5 border-b border-border bg-muted/20 backdrop-blur supports-[backdrop-filter]:bg-muted/10">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-             <Sparkles className="w-4 h-4 text-primary" />
+             <Sparkles className="w-4 h-4 text-primary animate-pulse-subtle" />
              AI Agent
           </CardTitle>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs font-normal px-2.5 py-1">
             Cursor-Drum-v1
           </Badge>
         </div>
@@ -89,30 +89,45 @@ export const ChatInterface = () => {
 
       {/* Messages */}
       <CardContent className="flex-1 p-0 overflow-hidden">
-        <ScrollArea className="h-full p-4">
+        <ScrollArea className="h-full p-5">
           <div className="space-y-6">
-            {messages.map(msg => (
-              <div key={msg.id} className={clsx("flex gap-3 text-sm", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
+            {messages.map((msg, index) => (
+              <div
+                key={msg.id}
+                className={clsx(
+                  "flex gap-3 text-sm animate-fade-in",
+                  msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+                )}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <div className={clsx(
-                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border",
-                  msg.role === 'agent' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 shadow-sm",
+                  msg.role === 'agent'
+                    ? "bg-primary text-primary-foreground border-primary/50"
+                    : "bg-muted text-muted-foreground border-border"
                 )}>
-                  {msg.role === 'agent' ? <Bot size={16} /> : <User size={16} />}
+                  {msg.role === 'agent' ? <Bot size={17} /> : <User size={17} />}
                 </div>
                 <div className={clsx(
-                  "max-w-[85%] p-3 rounded-lg leading-relaxed whitespace-pre-wrap shadow-sm",
-                  msg.role === 'agent' ? "bg-muted/50 text-foreground" : "bg-primary text-primary-foreground"
+                  "max-w-[85%] p-4 rounded-xl leading-relaxed whitespace-pre-wrap shadow-md",
+                  msg.role === 'agent'
+                    ? "bg-muted/50 text-foreground border border-border/50"
+                    : "bg-primary text-primary-foreground border-2 border-primary/50"
                 )}>
                   {msg.content}
                 </div>
               </div>
             ))}
             {isTyping && (
-              <div className="flex gap-3 text-sm">
-                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 animate-pulse">
-                   <Bot size={16} className="text-primary-foreground" />
+              <div className="flex gap-3 text-sm animate-fade-in">
+                 <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0 border-2 border-primary/50 shadow-md animate-pulse">
+                   <Bot size={17} className="text-primary-foreground" />
                  </div>
-                 <div className="bg-muted p-3 rounded-lg text-muted-foreground text-xs">Thinking...</div>
+                 <div className="bg-muted/50 p-4 rounded-xl text-muted-foreground text-xs border border-border/50 shadow-sm flex items-center gap-1">
+                   <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                   <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                   <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                 </div>
               </div>
             )}
           </div>
@@ -120,23 +135,31 @@ export const ChatInterface = () => {
       </CardContent>
 
       {/* Input */}
-      <CardFooter className="p-4 border-t border-border bg-background">
-        <div className="w-full space-y-2">
+      <CardFooter className="p-5 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="w-full space-y-3">
           <div className="flex gap-2">
             <Input
-              className="flex-1"
+              className="flex-1 h-11 px-4 text-sm focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Ask AI to edit the groove..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />
-            <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
-              <Send size={16} />
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="h-11 w-11 shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              <Send size={17} />
             </Button>
           </div>
-          <div className="flex justify-between px-1 text-[10px] text-muted-foreground">
+          <div className="flex justify-between px-1 text-[10px] text-muted-foreground font-medium">
             <span>Try: "Rock", "Disco", "Clear"</span>
-            <span>Enter to send</span>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-muted/50 border border-border/50">Enter</kbd>
+              to send
+            </span>
           </div>
         </div>
       </CardFooter>

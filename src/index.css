@@ -36,13 +36,14 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* 增强对比度的暗色主题 */
+    --background: 220 20% 8%; /* 更深的背景，提高对比度 */
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 223 15% 12%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 223 15% 12%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217.2 91.2% 59.8%;
@@ -72,5 +73,48 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* 优化字体渲染 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 改善滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30;
+  }
+
+  /* 增强焦点可见性（可访问性） */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* 平滑过渡动画 */
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 卡片悬停效果 */
+  .card-hover {
+    @apply transition-smooth hover:shadow-lg hover:shadow-foreground/5;
+  }
+
+  /* 渐变背景 */
+  .gradient-overlay {
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--background)) 0%,
+      hsl(var(--muted) / 0.1) 100%
+    );
   }
 }
