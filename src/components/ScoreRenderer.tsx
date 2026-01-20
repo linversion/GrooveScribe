@@ -21,7 +21,7 @@ export const ScoreRenderer = () => {
       const isDark = document.documentElement.classList.contains('dark');
       const color = isDark ? 'white' : 'black';
       svgElement.setAttribute('color', color);
-      (svgElement as HTMLElement).style.color = color;
+      svgElement.style.color = color;
     }
   }, [renderer]);
 

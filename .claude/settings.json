@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Command(.claude/hooks/on-subagent-stop.sh)",
+      "Command(python .claude/hooks/on-subagent-stop.py)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/on-subagent-stop.py",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/on-subagent-stop.py"
+          }
+        ]
+      }
+    ]
+  }
+}

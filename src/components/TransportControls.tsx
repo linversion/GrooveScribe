@@ -1,16 +1,17 @@
-import { Play, Square, Volume2, Mic2 } from 'lucide-react';
+import { Play, Square, Volume2, Mic2, Loader2 } from 'lucide-react';
 import { useDrumStore } from '../store/useDrumStore';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { RendererToggle } from './RendererToggle';
+import { AudioModeToggle } from './AudioModeToggle';
 
 export const TransportControls = () => {
-  const { isPlaying, setIsPlaying, bpm, setBpm } = useDrumStore();
+  const { isPlaying, setIsPlaying, bpm, setBpm, audioMode, totalMeasures } = useDrumStore();
 
   // 使用音频引擎 hook（自动处理 gridData 变化）
-  const { play, stop } = useAudioEngine();
+  const { play, stop, loadingProgress } = useAudioEngine();
 
   const togglePlay = async () => {
     if (!isPlaying) {
@@ -21,6 +22,8 @@ export const TransportControls = () => {
       setIsPlaying(false);
     }
   };
+
+  const isLoading = loadingProgress < 1;
 
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border shadow-sm">
@@ -41,7 +44,9 @@ export const TransportControls = () => {
           </h1>
           <div className="flex items-center gap-2 text-muted-foreground text-xs">
              <Mic2 size={12} className="opacity-70" />
-             <span className="font-medium">Web Audio Synth</span>
+             <span className="font-medium">
+               {audioMode === 'synth' ? 'Web Audio Synth' : 'Sample-Based Audio'}
+             </span>
           </div>
         </div>
       </div>
@@ -52,7 +57,10 @@ export const TransportControls = () => {
         <div className="flex items-center gap-4 w-52">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider w-10">BPM</span>
           <div className="flex flex-col flex-1 gap-2">
-             <span className="text-2xl font-mono font-bold text-center text-foreground tabular-nums tracking-tight">{bpm}</span>
+             <div className="flex items-baseline justify-center gap-2">
+               <span className="text-2xl font-mono font-bold text-foreground tabular-nums tracking-tight">{bpm}</span>
+               <span className="text-xs text-muted-foreground">BPM</span>
+             </div>
              <Slider
                 value={[bpm]}
                 min={40}
@@ -61,6 +69,9 @@ export const TransportControls = () => {
                 onValueChange={(vals) => setBpm(vals[0])}
                 className="cursor-pointer"
              />
+             <div className="text-[10px] text-muted-foreground text-center">
+               {bpm} BPM = 每小节 {(60 / bpm * 4).toFixed(1)}秒
+             </div>
           </div>
         </div>
 
@@ -73,10 +84,42 @@ export const TransportControls = () => {
             <div className="w-3/4 h-full bg-gradient-to-r from-primary to-primary/80 rounded-full animate-pulse-subtle" />
           </div>
         </div>
+
+        <div className="h-10 w-px bg-border" />
+
+        {/* 加载进度指示器（仅在采样模式加载中显示） */}
+        {audioMode === 'sample' && isLoading && (
+          <div className="flex items-center gap-2">
+            <Loader2 size={16} className="animate-spin text-primary" />
+            <div className="flex items-center gap-2">
+              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${loadingProgress * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {Math.round(loadingProgress * 100)}%
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 渲染器切换按钮 */}
-      <RendererToggle />
+      {/* 渲染器切换按钮、音频模式切换和小节数量显示 */}
+      <div className="flex items-center gap-3">
+        <AudioModeToggle />
+        <div className="h-8 w-px bg-border" />
+        <RendererToggle />
+        <div className="h-8 w-px bg-border" />
+
+        {/* 小节数量显示 */}
+        <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-lg">
+          <span className="text-xs text-muted-foreground">小节</span>
+          <span className="text-sm font-medium tabular-nums">{totalMeasures}</span>
+          <span className="text-xs text-muted-foreground">/ 10</span>
+        </div>
+      </div>
     </div>
   );
 };

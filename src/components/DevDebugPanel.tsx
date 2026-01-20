@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDrumStore, INSTRUMENT_NAMES } from '../store/useDrumStore';
-import { X, ChevronDown, ChevronUp, Copy, Check, GripHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Check, GripHorizontal } from 'lucide-react';
 import { clsx } from 'clsx';
 
 /**

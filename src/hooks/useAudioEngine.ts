@@ -1,80 +1,47 @@
 import { useEffect, useRef, useCallback } from 'react';
 import * as Tone from 'tone';
 import { useDrumStore, Instrument, INSTRUMENTS } from '../store/useDrumStore';
+import { SynthStrategy } from '../strategies/SynthStrategy';
+import { SamplerStrategy } from '../strategies/SamplerStrategy';
+import { AudioEngineStrategy } from '../strategies/AudioEngineStrategy';
 
 /**
  * 音频引擎 Hook
- * 使用 Tone.Part 管理音序，支持 gridData 动态更新
+ * 支持合成器和采样器双模式，使用 Tone.Part 管理音序，支持 gridData 动态更新
  */
 export const useAudioEngine = () => {
-  const { gridData, bpm, isPlaying, setCurrentStep, stepsPerMeasure, totalMeasures } = useDrumStore();
-  
+  const { gridData, bpm, isPlaying, setCurrentStep, stepsPerMeasure, totalMeasures, audioMode } = useDrumStore();
+
   // Refs for Tone.js objects
   const partRef = useRef<Tone.Part | null>(null);
-  const synthsRef = useRef<Record<string, any>>({});
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const strategyRef = useRef<AudioEngineStrategy | null>(null);
+  const updateTimeoutRef = useRef<number | null>(null);
 
-  // 初始化音色
+  // 根据音频模式初始化策略
   useEffect(() => {
-    console.log('[AudioEngine] Initializing synths...');
-    
-    // Kick - 使用 MembraneSynth 模拟低频底鼓
-    synthsRef.current.kick = new Tone.MembraneSynth({
-      pitchDecay: 0.05,
-      octaves: 10,
-      oscillator: { type: 'sine' },
-      envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 }
-    }).toDestination();
+    const initStrategy = async () => {
+      console.log(`[AudioEngine] Initializing ${audioMode} mode...`);
 
-    // Snare - 使用 NoiseSynth + MembraneSynth 混合
-    const snareNoise = new Tone.NoiseSynth({
-      noise: { type: 'white' },
-      envelope: { attack: 0.001, decay: 0.2, sustain: 0 }
-    }).toDestination();
-    const snareTone = new Tone.MembraneSynth({
-      pitchDecay: 0.01,
-      octaves: 2,
-      envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
-    }).toDestination();
-    synthsRef.current.snare = snareNoise; // 主要用 noise
-    synthsRef.current.snareTone = snareTone;
+      // 清理旧策略
+      if (strategyRef.current) {
+        strategyRef.current.dispose();
+        strategyRef.current = null;
+      }
 
-    // Hi-Hat - MetalSynth
-    synthsRef.current.hihat_closed = new Tone.MetalSynth({
-      envelope: { attack: 0.001, decay: 0.05, release: 0.01 },
-      harmonicity: 5.1,
-      modulationIndex: 32,
-      resonance: 4000,
-      octaves: 1.5
-    }).toDestination();
+      // 根据模式创建策略
+      const Strategy = audioMode === 'synth' ? SynthStrategy : SamplerStrategy;
+      strategyRef.current = new Strategy();
 
-    synthsRef.current.hihat_open = new Tone.MetalSynth({
-      envelope: { attack: 0.001, decay: 0.3, release: 0.3 },
-      harmonicity: 5.1,
-      modulationIndex: 32,
-      resonance: 4000,
-      octaves: 1.5
-    }).toDestination();
-
-    // Toms
-    synthsRef.current.tom_floor = new Tone.MembraneSynth({
-      pitchDecay: 0.08,
-      octaves: 4,
-      envelope: { attack: 0.001, decay: 0.5, sustain: 0 }
-    }).toDestination();
-
-    synthsRef.current.tom_high = new Tone.MembraneSynth({
-      pitchDecay: 0.05,
-      octaves: 4,
-      envelope: { attack: 0.001, decay: 0.3, sustain: 0 }
-    }).toDestination();
-
-    return () => {
-      console.log('[AudioEngine] Disposing synths...');
-      Object.values(synthsRef.current).forEach(synth => synth.dispose());
-      synthsRef.current = {};
+      try {
+        await strategyRef.current.initialize();
+        console.log(`[AudioEngine] ${audioMode} mode initialized successfully`);
+      } catch (error) {
+        console.error(`[AudioEngine] Failed to initialize ${audioMode} mode:`, error);
+      }
     };
-  }, []);
+
+    initStrategy();
+  }, [audioMode]);
 
   // 同步 BPM
   useEffect(() => {
@@ -84,16 +51,17 @@ export const useAudioEngine = () => {
   // 根据 gridData 生成 Tone.Part events
   const generateEvents = useCallback(() => {
     const totalSteps = stepsPerMeasure * totalMeasures;
-    const events: Array<{ time: string, step: number, notes: Array<{ instrument: Instrument, velocity: number }> }> = [];
+    const events: Array<{ time: string, step: number, notes: Array<{ instrument: Instrument, velocity: number, articulation: 'normal' | 'accent' | 'ghost' }> }> = [];
 
     for (let step = 0; step < totalSteps; step++) {
-      const notesAtStep: Array<{ instrument: Instrument, velocity: number }> = [];
+      const notesAtStep: Array<{ instrument: Instrument, velocity: number, articulation: 'normal' | 'accent' | 'ghost' }> = [];
 
       INSTRUMENTS.forEach(inst => {
         if (gridData[inst][step].active) {
           notesAtStep.push({
             instrument: inst,
-            velocity: gridData[inst][step].velocity
+            velocity: gridData[inst][step].velocity,
+            articulation: gridData[inst][step].articulation
           });
         }
       });
@@ -119,7 +87,7 @@ export const useAudioEngine = () => {
     // Debounce: 等待 100ms 后更新
     updateTimeoutRef.current = setTimeout(() => {
       console.log('[AudioEngine] Updating Tone.Part with new gridData...');
-      
+
       const events = generateEvents();
 
       // 如果 Part 已存在，先停止并释放
@@ -135,31 +103,14 @@ export const useAudioEngine = () => {
           setCurrentStep(event.step);
         }, time);
 
-        // 播放当前步骤的所有音符
-        event.notes.forEach(({ instrument, velocity }) => {
-          const normalizedVelocity = velocity / 127;
-          
-          switch (instrument) {
-            case 'kick':
-              synthsRef.current.kick?.triggerAttackRelease('C1', '8n', time, normalizedVelocity);
-              break;
-            case 'snare':
-              synthsRef.current.snare?.triggerAttackRelease('16n', time, normalizedVelocity);
-              synthsRef.current.snareTone?.triggerAttackRelease('G2', '32n', time, normalizedVelocity * 0.3);
-              break;
-            case 'hihat_closed':
-              synthsRef.current.hihat_closed?.triggerAttackRelease('32n', time, normalizedVelocity * 0.5);
-              break;
-            case 'hihat_open':
-              synthsRef.current.hihat_open?.triggerAttackRelease('8n', time, normalizedVelocity * 0.6);
-              break;
-            case 'tom_floor':
-              synthsRef.current.tom_floor?.triggerAttackRelease('G2', '8n', time, normalizedVelocity);
-              break;
-            case 'tom_high':
-              synthsRef.current.tom_high?.triggerAttackRelease('C3', '8n', time, normalizedVelocity);
-              break;
-          }
+        // 播放当前步骤的所有音符（使用统一接口）
+        event.notes.forEach(({ instrument, velocity, articulation }) => {
+          strategyRef.current?.playInstrument(
+            instrument,
+            velocity,
+            articulation,
+            time
+          );
         });
       }, events);
 
@@ -179,7 +130,7 @@ export const useAudioEngine = () => {
   // 监听 gridData 变化
   useEffect(() => {
     updateSequence();
-    
+
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
@@ -201,6 +152,11 @@ export const useAudioEngine = () => {
   // 播放控制
   const play = useCallback(async () => {
     await Tone.start();
+
+    // 调试：输出当前BPM和时间信息
+    console.log(`[AudioEngine] BPM: ${Tone.Transport.bpm.value}`);
+    console.log(`[AudioEngine] Time for 16 steps at 80 BPM:`, Tone.Time('0:0:15').toSeconds(), 'seconds');
+
     Tone.Transport.start();
     if (partRef.current) {
       partRef.current.start(0);
@@ -217,6 +173,8 @@ export const useAudioEngine = () => {
 
   return {
     play,
-    stop
+    stop,
+    isReady: strategyRef.current?.isReady() ?? false,
+    loadingProgress: strategyRef.current?.getLoadingProgress() ?? 1
   };
 };

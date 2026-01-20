@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GrooveScribe 是一个基于 Web 的鼓编辑器应用，允许用户创建、编辑和播放鼓节奏，并能实时生成五线谱显示。这是一个从原生 JavaScript 重构到 React + TypeScript 的现代化项目。
 
+**核心特性：**
+- 双音频模式：合成器模式（Tone.js）和采样模式（MP3 音频样本）
+- 多小节支持：1-10 小节动态添加/删除
+- 可视化网格编辑器
+- 实时音频播放
+- 五线谱同步显示（双渲染器：abcjs/abc2svg）
+- AI 助手接口（预留）
+
 ## 开发命令
 
 ```bash
@@ -39,7 +47,11 @@ npm run lint
 
 ### 数据流
 ```
-用户交互 → DrumGrid → Zustand Store → useAudioEngine → Tone.js
+用户交互 → DrumGrid → Zustand Store → useAudioEngine → AudioEngineStrategy
+                                                     ↓
+                                          SynthStrategy / SamplerStrategy
+                                                     ↓
+                                                 Tone.js
                                ↓
                            abcGenerator → ScoreRenderer
 ```
@@ -51,21 +63,31 @@ npm run lint
    - 6 种打击乐器：Kick、Snare、Hi-Hat Closed/Open、High Tom、Floor Tom
    - 音符属性：active、velocity、articulation (normal/accent/ghost)
    - BPM 和播放状态控制
+   - 小节管理：totalMeasures（1-10），addMeasure()，removeMeasure()
+   - 音频模式：audioMode（synth/sample），setAudioMode()
 
 2. **音频引擎** (`src/hooks/useAudioEngine.ts`)
-   - 使用 Tone.js 创建合成器
+   - **策略模式架构**：
+     - `AudioEngineStrategy` 接口定义统一行为
+     - `SynthStrategy` 实现 Tone.js 合成器模式
+     - `SamplerStrategy` 实现 MP3 采样模式
    - 不同乐器使用不同合成器类型（MembraneSynth、NoiseSynth、MetalSynth）
    - 使用 Tone.Part 管理音序，支持实时更新
    - 100ms 防抖优化避免频繁重建音序
+   - 音频模式切换时自动重新初始化
 
 3. **UI 组件**
-   - `DrumGrid.tsx` - 网格编辑器（16 步，可扩展）
-   - `ScoreRenderer.tsx` - 五线谱渲染器（基于 abcjs）
-   - `TransportControls.tsx` - 播放控制栏
+   - `DrumGrid.tsx` - 多小节网格编辑器（支持 1-10 小节）
+   - `ScoreRenderer.tsx` - 五线谱渲染器（基于 abcjs/abc2svg）
+   - `TransportControls.tsx` - 播放控制栏（含小节数量显示、模式切换）
+   - `MeasureControls.tsx` - 小节控制（添加/删除按钮）
+   - `AudioModeToggle.tsx` - 音频模式切换（合成器/采样）
+   - `RendererToggle.tsx` - 渲染器切换（abcjs/abc2svg）
    - `ChatInterface.tsx` - AI 助手界面（当前为演示级实现）
 
 4. **工具模块**
    - `abcGenerator.ts` - 将网格数据转换为 ABC 记谱法
+   - `sampleMapping.ts` - 采样文件映射配置
 
 ### 组件分层
 
@@ -114,15 +136,22 @@ npm run lint
 
 - `src/store/useDrumStore.ts` - 全局状态管理，理解数据结构的关键
 - `src/hooks/useAudioEngine.ts` - 音频引擎核心逻辑
+- `src/strategies/AudioEngineStrategy.ts` - 音频引擎策略接口
+- `src/strategies/SynthStrategy.ts` - 合成器模式实现
+- `src/strategies/SamplerStrategy.ts` - 采样模式实现
 - `src/utils/abcGenerator.ts` - 网格数据到五线谱的转换逻辑
+- `src/utils/sampleMapping.ts` - 采样文件映射配置
 - `vite.config.ts` - Vite 配置，包含路径别名 @ 指向 src
 
 ## 项目特色
 
-- 实时音频合成（Web Audio API）
-- 可视化网格编辑
-- 五线谱同步渲染
-- AI 助手接口（预留）
+- **双音频模式**：合成器模式（Tone.js）和采样模式（MP3）无缝切换
+- **多小节支持**：1-10 小节动态管理，智能数据保留
+- **实时音频合成**（Web Audio API）
+- **可视化网格编辑**
+- **五线谱同步渲染**（双渲染器支持）
+- **策略模式架构**：音频引擎可扩展性强
+- **AI 助手接口**（预留）
 - 从原生 JS 渐进式重构到现代 React
 
 ## 遗留代码

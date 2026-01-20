@@ -16,8 +16,8 @@ const constant_ABC_HH_Accent = "!accent!^g";
 const constant_ABC_HH_Open = "!open!^g";     // Open Hi-hat
 const constant_ABC_T1_Normal = "e";          // High Tom
 const constant_ABC_T1_Accent = "!accent!e";
-const constant_ABC_T2_Normal = "d";          // Mid Tom 2
-const constant_ABC_T3_Normal = "B";          // Mid Tom 3
+// const constant_ABC_T2_Normal = "d";          // Mid Tom 2 (未使用)
+// const constant_ABC_T3_Normal = "B";          // Mid Tom 3 (未使用)
 const constant_ABC_T4_Normal = "A";          // Floor Tom
 const constant_ABC_T4_Accent = "!accent!A";
 

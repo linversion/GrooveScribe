@@ -34,8 +34,8 @@ class Abc2svgCallback {
   abc_error_output = '';
 
   // 必需的方法
-  read_file = (fn: string) => ''; // 处理 %%abc-include 指令
-  errmsg = (msg: string, line: number, col: number) => {
+  read_file = (_fn: string) => ''; // 处理 %%abc-include 指令
+  errmsg = (msg: string, _line: number, _col: number) => {
     this.abc_error_output += msg + '<br/>\n';
   };
   img_out = (str: string) => {
